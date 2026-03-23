@@ -1,12 +1,13 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
 <title>USD/INR Conversion Optimizer</title>
-<meta name="description" content="CIP-based USD/INR conversion optimizer with live rates and AI sentiment"/>
+<meta name="description" content="CIP-based USD/INR conversion optimizer with live rates and sentiment"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💱</text></svg>"/>
-<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;USD/INR Optimizer&quot;,&quot;short_name&quot;:&quot;FX Optimizer&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230f0f1e&quot;,&quot;theme_color&quot;:&quot;%236c63ff&quot;}"/>
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;USD/INR Optimizer&quot;,&quot;short_name&quot;:&quot;FX Opt&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230f0f1e&quot;,&quot;theme_color&quot;:&quot;%236c63ff&quot;}"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0f0f1e"/>
@@ -16,16 +17,15 @@
 body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
 input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:6px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent)}
-
 .card{background:var(--card);border-radius:12px;padding:20px 24px;margin-bottom:16px;border:1px solid var(--border)}
 .card-title{margin:0 0 16px;font-size:14px;font-weight:600;color:#a0a0d0;text-transform:uppercase;letter-spacing:1px}
 .pill{padding:6px 16px;border-radius:20px;border:1px solid #3a3a5a;background:transparent;color:var(--sub);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
 .pill.active{border-color:var(--accent);background:var(--accent);color:#fff}
 .pill:hover:not(.active){border-color:#5a5a7a}
 .metric{background:var(--card);border-radius:12px;padding:16px 18px;border:1px solid var(--border)}
-.metric .label{font-size:11px;color:var(--sub);margin-bottom:4px}
-.metric .value{font-size:22px;font-weight:700}
-.metric .sub{font-size:11px;margin-top:2px}
+.metric .lb{font-size:11px;color:var(--sub);margin-bottom:4px}
+.metric .vl{font-size:22px;font-weight:700}
+.metric .sb{font-size:11px;margin-top:2px}
 .grid{display:grid;gap:12px}
 .g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
@@ -41,8 +41,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 .stbl th,.stbl td{padding:6px}
 .stbl th{background:var(--card2);color:var(--sub)}
 .prob-bar{height:12px;background:#2a2a4a;border-radius:6px;overflow:hidden;display:flex}
-.api-in{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;width:100%;font-family:monospace}
-.api-in:focus{outline:none;border-color:var(--accent)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .dot.live{animation:pulse 1.5s infinite}
 .flex{display:flex}.gap-8{gap:8px}.gap-12{gap:12px}.gap-16{gap:16px}.aic{align-items:center}.jcsb{justify-content:space-between}.fw{flex-wrap:wrap}
@@ -53,10 +51,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 .loading{display:flex;align-items:center;justify-content:center;flex-direction:column;min-height:100vh}
 .bar-t{width:200px;height:4px;background:#2a2a4a;border-radius:2px;overflow:hidden}
 .bar-f{width:60%;height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:2px;animation:ld 1.5s ease-in-out infinite}
+.src-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;background:var(--card2);font-size:10px;color:var(--dim);margin-top:4px}
 @keyframes ld{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @media(max-width:600px){
-  .metric .value{font-size:18px}
+  .metric .vl{font-size:18px}
   .card{padding:16px}
   .hdr{padding:16px 16px 12px}
   .mx{padding:12px!important}
@@ -66,18 +65,52 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </head>
 <body>
 <div id="root"></div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-
 <script type="text/babel">
 const {useState,useEffect,useCallback,useMemo}=React;
 
-/* ── Constants ── */
+/* ━━ CONFIG ━━ */
 const HZ=[{l:"1M",m:1},{l:"3M",m:3},{l:"6M",m:6},{l:"12M",m:12}];
+const CORS="https://api.allorigins.win/get?url=";
 
-/* ── CIP Math ── */
+/* ━━ SENTIMENT DICTIONARIES ━━ */
+const HAWK_W=["hike","hawkish","tighten","tightening","restrictive","inflation","inflationary","higher rate","rate hike","rate increase","raising rates","above target","overheating","no cut","hold rate","pause cut","delay cut","sticky inflation"];
+const DOVE_W=["cut","dovish","ease","easing","accommodative","lower rate","rate cut","rate reduction","rate decrease","lowering rates","stimulus","support","growth concern","recession","slowdown","disinflation","below target","rate pivot","pivot"];
+const INR_BULL=["inr strength","rupee strength","rupee gain","rupee appreciat","inr appreciat","india growth","fdi india","india surplus","rbi intervention","capital inflow","rupee rally","inr rally"];
+const INR_BEAR=["rupee weak","rupee depreciat","inr depreciat","rupee fall","inr fall","india deficit","capital outflow","oil price rise","crude surge","dollar strength","dxy rally","rupee pressure","inr pressure","rupee hit low","rupee slump"];
+
+function scoreText(text, words) {
+  const t = text.toLowerCase();
+  let score = 0;
+  for (const w of words) { let idx = 0; while ((idx = t.indexOf(w, idx)) !== -1) { score++; idx += w.length; } }
+  return score;
+}
+
+function analyzeStance(headlines, entity) {
+  const all = headlines.join(" ").toLowerCase();
+  const h = scoreText(all, HAWK_W);
+  const d = scoreText(all, DOVE_W);
+  if (h > d + 2) return "hawkish";
+  if (d > h + 2) return "dovish";
+  return "neutral";
+}
+
+function analyzeSentiment(headlines) {
+  const all = headlines.join(" ");
+  const bull = scoreText(all, INR_BULL);
+  const bear = scoreText(all, INR_BEAR);
+  const hawk = scoreText(all, HAWK_W);
+  const dove = scoreText(all, DOVE_W);
+  // Positive score = hold USD is better (INR weakening / USD strengthening)
+  const raw = (bear - bull) + (hawk - dove) * 0.5;
+  const clamped = Math.max(-100, Math.min(100, raw * 8));
+  const prob = Math.max(15, Math.min(85, 50 + clamped * 0.35));
+  return { score: Math.round(clamped), prob: Math.round(prob) };
+}
+
+/* ━━ CIP MATH ━━ */
 const cFwd=(s,rU,rI,mo)=>{const t=mo/12;return s*(1+(rI/100)*t)/(1+(rU/100)*t)};
 const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 
@@ -100,7 +133,149 @@ const buildMx=(sp,bU,bI,spr,mo,steps=5,ss=.5)=>{
   return{uR,iR,cells,mn,mx}
 };
 
-/* ── Components ── */
+/* ━━ SCRAPER FUNCTIONS ━━ */
+async function fetchViaProxy(url) {
+  const r = await fetch(CORS + encodeURIComponent(url));
+  if (!r.ok) throw new Error(`Proxy ${r.status}`);
+  const d = await r.json();
+  return d.contents;
+}
+
+async function scrapeSpotRate() {
+  // Primary: free ExchangeRate API
+  try {
+    const r = await fetch("https://open.exchangerate-api.com/v6/latest/USD");
+    if (r.ok) { const d = await r.json(); if (d?.rates?.INR) return { rate: d.rates.INR, src: "ExchangeRate API" }; }
+  } catch {}
+  // Fallback 1: frankfurter.app (ECB data, free, no key)
+  try {
+    const r = await fetch("https://api.frankfurter.app/latest?from=USD&to=INR");
+    if (r.ok) { const d = await r.json(); if (d?.rates?.INR) return { rate: d.rates.INR, src: "Frankfurter (ECB)" }; }
+  } catch {}
+  // Fallback 2: scrape from xe.com via proxy
+  try {
+    const html = await fetchViaProxy("https://www.x-rates.com/calculator/?from=USD&to=INR&amount=1");
+    const m = html.match(/class="ccOutputRs498"[^>]*>([\d.]+)</);
+    if (m) return { rate: parseFloat(m[1]), src: "X-Rates" };
+  } catch {}
+  throw new Error("All spot sources failed");
+}
+
+async function scrapeInterestRates() {
+  let fedRate = null, rbiRate = null, fedSrc = "", rbiSrc = "";
+
+  // Fed: Try FRED public page scrape
+  try {
+    const html = await fetchViaProxy("https://www.global-rates.com/en/interest-rates/central-banks/central-bank-america/fed-interest-rate.aspx");
+    const m = html.match(/current[\s\S]*?(\d+\.\d+)\s*%/i);
+    if (m) { fedRate = parseFloat(m[1]); fedSrc = "Global-Rates.com"; }
+  } catch {}
+
+  // Fed fallback: scrape from Trading Economics summary
+  if (!fedRate) {
+    try {
+      const html = await fetchViaProxy("https://www.global-rates.com/en/interest-rates/central-banks/central-bank-america/fed-interest-rate.aspx");
+      const matches = html.match(/(\d+\.\d+)\s*%/g);
+      if (matches && matches.length > 0) {
+        const vals = matches.map(m => parseFloat(m)).filter(v => v > 0 && v < 20);
+        if (vals.length) { fedRate = vals[0]; fedSrc = "Global-Rates.com"; }
+      }
+    } catch {}
+  }
+
+  // RBI: scrape from global-rates
+  try {
+    const html = await fetchViaProxy("https://www.global-rates.com/en/interest-rates/central-banks/central-bank-india/rbi-interest-rate.aspx");
+    const m = html.match(/current[\s\S]*?(\d+\.\d+)\s*%/i);
+    if (m) { rbiRate = parseFloat(m[1]); rbiSrc = "Global-Rates.com"; }
+    if (!rbiRate) {
+      const matches = html.match(/(\d+\.\d+)\s*%/g);
+      if (matches) {
+        const vals = matches.map(m => parseFloat(m)).filter(v => v > 2 && v < 15);
+        if (vals.length) { rbiRate = vals[0]; rbiSrc = "Global-Rates.com"; }
+      }
+    }
+  } catch {}
+
+  // Fallback: try bankrate-style or generic scrape
+  if (!fedRate) {
+    try {
+      const html = await fetchViaProxy("https://www.bankrate.com/rates/interest-rates/federal-funds-rate.aspx");
+      const m = html.match(/(\d+\.\d+)\s*%\s*-\s*(\d+\.\d+)\s*%/);
+      if (m) { fedRate = parseFloat(m[2]); fedSrc = "Bankrate"; }
+    } catch {}
+  }
+
+  return {
+    fed: fedRate, rbi: rbiRate,
+    fedSrc: fedSrc || "Manual", rbiSrc: rbiSrc || "Manual"
+  };
+}
+
+async function scrapeNews() {
+  const queries = [
+    "USD+INR+exchange+rate",
+    "Federal+Reserve+interest+rate",
+    "RBI+monetary+policy+repo+rate"
+  ];
+  const allHeadlines = [];
+  const fedHeadlines = [];
+  const rbiHeadlines = [];
+
+  for (let qi = 0; qi < queries.length; qi++) {
+    try {
+      const url = `https://news.google.com/rss/search?q=${queries[qi]}&hl=en-IN&gl=IN&ceid=IN:en`;
+      const xml = await fetchViaProxy(url);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, "text/xml");
+      const items = doc.querySelectorAll("item");
+      const limit = Math.min(items.length, 6);
+      for (let i = 0; i < limit; i++) {
+        const title = items[i].querySelector("title")?.textContent || "";
+        const pubDate = items[i].querySelector("pubDate")?.textContent || "";
+        const source = items[i].querySelector("source")?.textContent || "";
+        const entry = { title, date: pubDate, source };
+        allHeadlines.push(entry);
+        if (qi === 1) fedHeadlines.push(entry);
+        if (qi === 2) rbiHeadlines.push(entry);
+      }
+    } catch {}
+  }
+
+  const allTitles = allHeadlines.map(h => h.title);
+  const fedTitles = fedHeadlines.map(h => h.title);
+  const rbiTitles = rbiHeadlines.map(h => h.title);
+
+  const fedStance = analyzeStance(fedTitles.length ? fedTitles : allTitles, "fed");
+  const rbiStance = analyzeStance(rbiTitles.length ? rbiTitles : allTitles, "rbi");
+  const { score, prob } = analyzeSentiment(allTitles);
+
+  // Dedupe and pick top 8 headlines
+  const seen = new Set();
+  const unique = allHeadlines.filter(h => {
+    const k = h.title.slice(0, 40);
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  }).slice(0, 8);
+
+  return {
+    fed_stance: fedStance,
+    rbi_stance: rbiStance,
+    sentiment_score: score,
+    probability_hold_usd: prob,
+    headlines: unique,
+    summary: buildSummary(fedStance, rbiStance, score, prob)
+  };
+}
+
+function buildSummary(fed, rbi, score, prob) {
+  const fedDesc = fed === "hawkish" ? "The Fed appears to be maintaining a hawkish stance, suggesting rates may stay higher for longer." : fed === "dovish" ? "The Fed is signaling a dovish pivot, with rate cuts potentially on the horizon." : "The Fed's stance appears broadly neutral with no strong directional signal.";
+  const rbiDesc = rbi === "hawkish" ? "The RBI is leaning hawkish, which could support INR strength." : rbi === "dovish" ? "The RBI is showing dovish tendencies, which may put pressure on the rupee." : "The RBI is maintaining a balanced stance.";
+  const dir = prob > 55 ? "Overall sentiment leans toward holding USD for now." : prob < 45 ? "Current conditions may favor converting to INR sooner." : "Signals are mixed — consider your time horizon carefully.";
+  return `${fedDesc} ${rbiDesc} ${dir}`;
+}
+
+/* ━━ COMPONENTS ━━ */
 const Sl=({lb,val,onChange,min,max,step,unit=""})=>(
   <div style={{marginBottom:14}}>
     <div className="flex jcsb" style={{marginBottom:4}}>
@@ -114,14 +289,8 @@ const Sl=({lb,val,onChange,min,max,step,unit=""})=>(
 const Pill=({on,onClick,ch})=><button className={`pill${on?" active":""}`} onClick={onClick}>{ch}</button>;
 const Bdg=({lb,c})=><span className="badge" style={{background:c+"22",color:c}}>{lb}</span>;
 
-/* ── Main App ── */
+/* ━━ MAIN APP ━━ */
 function App(){
-  /* API Key */
-  const [key,setKey]=useState(()=>{try{return localStorage.getItem("_ak")||""}catch{return""}});
-  const [setup,setSetup]=useState(false);
-  const saveK=k=>{setKey(k);try{localStorage.setItem("_ak",k)}catch{}};
-
-  /* Spot */
   const [spot,setSpot]=useState(null);
   const [spSrc,setSpSrc]=useState("");
   const [spTime,setSpTime]=useState("");
@@ -130,79 +299,59 @@ function App(){
   const [mSpot,setMSpot]=useState(false);
   const [mSpotV,setMSpotV]=useState(85.5);
 
-  /* Rates */
   const [lU,setLU]=useState(null);
   const [lI,setLI]=useState(null);
   const [rSrc,setRSrc]=useState("");
   const [rLoad,setRLoad]=useState(true);
   const [rErr,setRErr]=useState(null);
   const [mRate,setMRate]=useState(false);
-  const [uR,setUR]=useState(4.5);
-  const [iR,setIR]=useState(6.5);
+  const [uR,setUR]=useState(4.50);
+  const [iR,setIR]=useState(6.50);
 
-  /* Controls */
   const [spr,setSpr]=useState(.28);
   const [hz,setHz]=useState(3);
   const [tab,setTab]=useState("dash");
 
-  /* News */
   const [news,setNews]=useState(null);
   const [nLoad,setNLoad]=useState(false);
   const [nErr,setNErr]=useState(null);
 
-  /* Claude helper */
-  const claude=useCallback(async(prompt)=>{
-    const k=key||(()=>{try{return localStorage.getItem("_ak")}catch{return""}})();
-    if(!k)throw new Error("NO_KEY");
-    const r=await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":k,"anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
-        tools:[{type:"web_search_20250305",name:"web_search"}],
-        messages:[{role:"user",content:prompt}]})
-    });
-    if(!r.ok){const t=await r.text();throw new Error(`API ${r.status}: ${t.slice(0,100)}`)}
-    const d=await r.json();
-    return(d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
-  },[key]);
-
-  /* Fetch Spot */
+  /* Fetch spot */
   const getSpot=useCallback(async()=>{
     setSpLoad(true);setSpErr(null);
     try{
-      const r=await fetch("https://open.exchangerate-api.com/v6/latest/USD");
-      if(r.ok){const d=await r.json();if(d?.rates?.INR){
-        const v=d.rates.INR;setSpot(v);setMSpotV(v);
-        setSpSrc("ExchangeRate API (free)");setSpTime(new Date().toLocaleString());setSpLoad(false);return;
-      }}
-    }catch{}
-    /* Fallback: Claude */
-    try{
-      const t=await claude(`Search for the current USD to INR exchange rate. Return ONLY JSON, no markdown: {"rate":<number>,"source":"<name>"}`);
-      const p=JSON.parse(t.replace(/```json|```/g,"").trim());
-      setSpot(p.rate);setMSpotV(p.rate);setSpSrc(p.source||"Claude Web Search");setSpTime(new Date().toLocaleString());
-    }catch(e){
-      setSpot(85.5);setMSpotV(85.5);setSpSrc("Default (offline)");
-      setSpErr(e.message==="NO_KEY"?"Add API key in ⚙️ for live fallback":"Using default rate");
-      setSpTime(new Date().toLocaleString());
+      const d=await scrapeSpotRate();
+      setSpot(d.rate);setMSpotV(d.rate);setSpSrc(d.src);setSpTime(new Date().toLocaleString());
+    }catch{
+      setSpot(85.5);setMSpotV(85.5);setSpSrc("Default (all sources failed)");setSpErr("Could not fetch live rate");setSpTime(new Date().toLocaleString());
     }finally{setSpLoad(false)}
-  },[claude]);
+  },[]);
 
-  /* Fetch Rates */
+  /* Fetch rates */
   const getRates=useCallback(async()=>{
     setRLoad(true);setRErr(null);
     try{
-      const t=await claude(`Search for the current US Federal Funds Rate (target upper bound) and India RBI Repo Rate as of today. Return ONLY JSON, no markdown, no preamble: {"fed_rate":<number>,"rbi_rate":<number>,"fed_source":"<name>","rbi_source":"<name>"}`);
-      const p=JSON.parse(t.replace(/```json|```/g,"").trim());
-      setLU(p.fed_rate);setLI(p.rbi_rate);
-      if(!mRate){setUR(p.fed_rate);setIR(p.rbi_rate)}
-      setRSrc(`Fed via ${p.fed_source} • RBI via ${p.rbi_source}`);
-    }catch(e){
-      setLU(4.5);setLI(6.5);
-      setRErr(e.message==="NO_KEY"?"Add Anthropic API key in ⚙️ Settings":"Failed — using defaults");
-      setRSrc("Defaults");
-    }finally{setRLoad(false)}
-  },[claude,mRate]);
+      const d=await scrapeInterestRates();
+      if(d.fed){setLU(d.fed);if(!mRate)setUR(d.fed)}
+      if(d.rbi){setLI(d.rbi);if(!mRate)setIR(d.rbi)}
+      const parts=[];
+      if(d.fedSrc&&d.fedSrc!=="Manual")parts.push(`Fed: ${d.fedSrc}`);
+      if(d.rbiSrc&&d.rbiSrc!=="Manual")parts.push(`RBI: ${d.rbiSrc}`);
+      setRSrc(parts.join(" • ")||"Scraped");
+      if(!d.fed&&!d.rbi)setRErr("Scrape failed — using defaults. Try manual override.");
+      else if(!d.fed)setRErr("Fed rate scrape failed — using default");
+      else if(!d.rbi)setRErr("RBI rate scrape failed — using default");
+    }catch{setRErr("Scrape failed — using defaults");setRSrc("Default")}
+    finally{setRLoad(false)}
+  },[mRate]);
+
+  /* Fetch news */
+  const getNews=useCallback(async()=>{
+    setNLoad(true);setNErr(null);
+    try{const d=await scrapeNews();setNews(d)}
+    catch{setNErr("Could not fetch news. CORS proxy may be down — try again later.")}
+    finally{setNLoad(false)}
+  },[]);
 
   useEffect(()=>{getSpot();getRates()},[]);
 
@@ -215,72 +364,41 @@ function App(){
   const fg=fwd-cn;
   const ar=(fg/cn)*(12/hz)*100;
   const hw=fg>0;
-  const mx=useMemo(()=>buildMx(aS,aU,aI,spr,hz),[aS,aU,aI,spr,hz]);
-
-  /* News */
-  const getNews=useCallback(async()=>{
-    setNLoad(true);setNErr(null);
-    try{
-      const t=await claude(`You are a forex analyst. Search for the latest USD/INR news, US Fed monetary policy stance, and India RBI monetary policy stance from the past week.
-
-Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
-{"fed_stance":"hawkish"|"neutral"|"dovish","rbi_stance":"hawkish"|"neutral"|"dovish","sentiment_score":<number -100 to 100, negative = INR likely weakens vs USD>,"probability_hold_usd":<0-100>,"summary":"<2-3 sentence market summary>","headlines":["<h1>","<h2>","<h3>","<h4>"]}`);
-      setNews(JSON.parse(t.replace(/```json|```/g,"").trim()));
-    }catch(e){setNErr(e.message==="NO_KEY"?"Add your Anthropic API key in ⚙️ Settings":"Failed. Try again.")}
-    finally{setNLoad(false)}
-  },[claude]);
+  const matrix=useMemo(()=>buildMx(aS,aU,aI,spr,hz),[aS,aU,aI,spr,hz]);
 
   const stC=s=>s==="hawkish"?"#ef4444":s==="dovish"?"#22c55e":"#eab308";
   const nP=news?.probability_hold_usd??null;
   const sig=nP!==null?(hw&&nP>50?"HOLD USD":!hw&&nP<50?"CONVERT NOW":"MIXED SIGNAL"):(hw?"HOLD USD (CIP)":"CONVERT NOW (CIP)");
   const sC=sig.includes("HOLD")?"var(--green)":sig.includes("CONVERT")?"var(--red)":"var(--yellow)";
 
-  /* Loading state */
   if(spLoad&&!spot)return(
     <div className="loading">
       <div style={{fontSize:48,marginBottom:16}}>💱</div>
       <div style={{fontSize:16,fontWeight:600,marginBottom:12}}>Fetching live market data…</div>
       <div className="bar-t"><div className="bar-f"/></div>
+      <div style={{fontSize:12,color:"var(--dim)",marginTop:12}}>No API keys needed — all data scraped from public sources</div>
     </div>);
 
   return(<div>
-    {/* ━━ HEADER ━━ */}
     <div className="hdr"><div className="mx">
       <div className="flex aic jcsb fw gap-12">
         <div>
           <h1 style={{fontSize:22,fontWeight:700}}>💱 USD/INR Optimizer</h1>
-          <p style={{marginTop:4,fontSize:13,color:"var(--sub)"}}>Covered Interest Rate Parity + AI Sentiment</p>
+          <p style={{marginTop:4,fontSize:13,color:"var(--sub)"}}>CIP + Scraped Rates + News Sentiment</p>
         </div>
-        <div className="flex gap-8 aic">
-          <button className="btn-s" onClick={()=>setSetup(!setup)} style={setup?{borderColor:"var(--accent)",color:"var(--accent)"}:{}}>⚙️</button>
-          <div className="sig" style={{background:sC+"18",border:`1px solid ${sC}44`}}>
-            <div style={{fontSize:10,color:"var(--sub)"}}>SIGNAL</div>
-            <div style={{fontSize:15,fontWeight:700,color:sC}}>{sig}</div>
-          </div>
+        <div className="sig" style={{background:sC+"18",border:`1px solid ${sC}44`}}>
+          <div style={{fontSize:10,color:"var(--sub)"}}>SIGNAL</div>
+          <div style={{fontSize:15,fontWeight:700,color:sC}}>{sig}</div>
         </div>
       </div>
       <div className="tabs">
-        {[["dash","📊 Dashboard"],["matrix","🔢 Sensitivity"],["news","📰 News & AI"]].map(([k,v])=>(
+        {[["dash","📊 Dashboard"],["matrix","🔢 Sensitivity"],["news","📰 News"]].map(([k,v])=>(
           <Pill key={k} on={tab===k} onClick={()=>setTab(k)} ch={v}/>
         ))}
       </div>
     </div></div>
 
     <div className="mx" style={{padding:20}}>
-
-    {/* ━━ SETTINGS ━━ */}
-    {setup&&<div className="card">
-      <h3 className="card-title">🔑 API Settings</h3>
-      <p style={{fontSize:13,color:"var(--sub)",marginBottom:12}}>
-        Your Anthropic API key powers live interest rate lookups, news feed, and sentiment analysis.
-        It stays in your browser's local storage only — never sent anywhere except Anthropic's API.
-      </p>
-      <input className="api-in" type="password" placeholder="sk-ant-api03-..." value={key} onChange={e=>saveK(e.target.value)}/>
-      <div className="flex gap-8" style={{marginTop:12}}>
-        <button className="btn-s" onClick={()=>{getSpot();getRates()}}>🔄 Re-fetch all rates</button>
-        {key&&<span style={{fontSize:12,color:"var(--green)",alignSelf:"center"}}>✓ Key saved</span>}
-      </div>
-    </div>}
 
     {/* ━━ LIVE SPOT ━━ */}
     <div className="card">
@@ -314,14 +432,14 @@ Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
         </div>
         <div className="flex gap-8">
           <button className="btn-s" onClick={getRates}>🔄</button>
-          <button className="btn-s" onClick={()=>{setMRate(!mRate);if(!mRate&&lU){setUR(lU);setIR(lI)}}} style={mRate?{borderColor:"var(--yellow)",color:"var(--yellow)"}:{}}>
+          <button className="btn-s" onClick={()=>{setMRate(!mRate);if(!mRate){if(lU)setUR(lU);if(lI)setIR(lI)}}} style={mRate?{borderColor:"var(--yellow)",color:"var(--yellow)"}:{}}>
             {mRate?"✏️ ON":"✏️"}
           </button>
         </div>
       </div>
       {!mRate&&<div style={{fontSize:11,color:"var(--dim)",marginTop:6}}>
         <span className={`dot${rErr?" ":" live"}`} style={{background:rErr?"var(--yellow)":"var(--green)"}}/>
-        {rSrc}{rErr&&<span style={{color:"var(--yellow)",marginLeft:8}}>⚠ {rErr}</span>}
+        {rSrc||"Loading…"}{rErr&&<span style={{color:"var(--yellow)",marginLeft:8}}>⚠ {rErr}</span>}
       </div>}
       {mRate&&<div className="grid g3" style={{marginTop:12,gap:20}}>
         <Sl lb="USD Rate (Fed Funds / MM)" val={uR} onChange={setUR} min={0} max={10} step={.25} unit="%"/>
@@ -339,7 +457,7 @@ Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
       </div>
     </div>
 
-    {/* ━━━━━━━━━━━ DASHBOARD TAB ━━━━━━━━━━━ */}
+    {/* ━━━━ DASHBOARD ━━━━ */}
     {tab==="dash"&&<>
       <div className="grid g4" style={{marginBottom:16}}>
         {[
@@ -349,13 +467,12 @@ Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
           {l:"Ann. Return (Hold)",v:`${ar>0?"+":""}${ar.toFixed(2)}%`,s:hw?"✅ Favor HOLD":"🔴 Favor CONVERT",c:hw?"var(--green)":"var(--red)"},
         ].map((c,i)=>(
           <div key={i} className="metric">
-            <div className="label">{c.l}</div>
-            <div className="value" style={{color:c.c||"var(--text)"}}>{c.v}</div>
-            <div className="sub" style={{color:c.c||"var(--accent)"}}>{c.s}</div>
+            <div className="lb">{c.l}</div>
+            <div className="vl" style={{color:c.c||"var(--text)"}}>{c.v}</div>
+            <div className="sb" style={{color:c.c||"var(--accent)"}}>{c.s}</div>
           </div>
         ))}
       </div>
-
       <div className="card">
         <h3 className="card-title">📐 CIP Formula Breakdown</h3>
         <div className="mono" style={{marginBottom:12}}>
@@ -365,13 +482,12 @@ Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
         </div>
         <p style={{fontSize:13,color:"var(--sub)",lineHeight:1.6}}>
           {hw
-            ?`CIP forward (₹${fwd.toFixed(2)}) > convert-now (₹${cn.toFixed(2)}). Holding USD and converting at the forward rate nets you ₹${fg.toFixed(2)} more per dollar, equivalent to ~${ar.toFixed(1)}% annualized return.`
-            :`CIP forward (₹${fwd.toFixed(2)}) < convert-now (₹${cn.toFixed(2)}). Converting now saves you ₹${Math.abs(fg).toFixed(2)} per dollar versus waiting.`}
+            ?`CIP forward (₹${fwd.toFixed(2)}) > convert-now (₹${cn.toFixed(2)}). Holding USD nets ₹${fg.toFixed(2)}/$ (~${ar.toFixed(1)}% annualized).`
+            :`CIP forward (₹${fwd.toFixed(2)}) < convert-now (₹${cn.toFixed(2)}). Converting now saves ₹${Math.abs(fg).toFixed(2)}/$.`}
         </p>
       </div>
-
       {news&&<div className="card">
-        <h3 className="card-title">🤖 AI Sentiment Summary</h3>
+        <h3 className="card-title">🤖 Sentiment Summary</h3>
         <div style={{marginBottom:8}}>
           <Bdg lb={`Fed: ${news.fed_stance}`} c={stC(news.fed_stance)}/>
           <Bdg lb={`RBI: ${news.rbi_stance}`} c={stC(news.rbi_stance)}/>
@@ -381,20 +497,20 @@ Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
       </div>}
     </>}
 
-    {/* ━━━━━━━━━━━ MATRIX TAB ━━━━━━━━━━━ */}
+    {/* ━━━━ MATRIX ━━━━ */}
     {tab==="matrix"&&<div className="card">
       <h3 className="card-title">Sensitivity — {hz}M Forward (Ann. % Gain vs Convert Now)</h3>
       <div style={{overflowX:"auto",paddingBottom:8}}>
         <table className="stbl"><thead><tr>
           <th style={{position:"sticky",left:0,zIndex:2}}>INR↓ \ USD→</th>
-          {mx.uR.map(u=><th key={u} style={{color:u===aU?"var(--accent)":"",fontWeight:u===aU?700:400}}>{u.toFixed(1)}%</th>)}
+          {matrix.uR.map(u=><th key={u} style={{color:u===aU?"var(--accent)":"",fontWeight:u===aU?700:400}}>{u.toFixed(1)}%</th>)}
         </tr></thead><tbody>
-          {mx.iR.map(ir=><tr key={ir}>
+          {matrix.iR.map(ir=><tr key={ir}>
             <td style={{background:"var(--card2)",position:"sticky",left:0,zIndex:1,color:ir===aI?"var(--accent)":"var(--sub)",fontWeight:ir===aI?700:400}}>{ir.toFixed(1)}%</td>
-            {mx.uR.map(ur=>{
-              const c=mx.cells.find(x=>x.u===ur&&x.i===ir);
+            {matrix.uR.map(ur=>{
+              const c=matrix.cells.find(x=>x.u===ur&&x.i===ir);
               const b=ur===aU&&ir===aI;
-              return<td key={ur} style={{textAlign:"center",background:heatCol(c.a,mx.mn,mx.mx),fontWeight:b?700:400,border:b?"2px solid var(--accent)":"1px solid var(--bg)",borderRadius:b?4:0}}>
+              return<td key={ur} style={{textAlign:"center",background:heatCol(c.a,matrix.mn,matrix.mx),fontWeight:b?700:400,border:b?"2px solid var(--accent)":"1px solid var(--bg)",borderRadius:b?4:0}}>
                 <div>{c.a>0?"+":""}{c.a}%</div>
                 <div style={{fontSize:9,color:"#aaa",marginTop:1}}>₹{c.f.toFixed(1)}</div>
               </td>
@@ -409,11 +525,11 @@ Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
       </div>
     </div>}
 
-    {/* ━━━━━━━━━━━ NEWS TAB ━━━━━━━━━━━ */}
+    {/* ━━━━ NEWS ━━━━ */}
     {tab==="news"&&<div className="card">
-      <h3 className="card-title">📰 AI-Powered News & Sentiment</h3>
+      <h3 className="card-title">📰 Scraped News & Keyword Sentiment</h3>
       <button className="btn" onClick={getNews} disabled={nLoad} style={{marginBottom:16}}>
-        {nLoad?"⏳ Analyzing markets…":"🔍 Fetch Latest News & Sentiment"}
+        {nLoad?"⏳ Scraping news feeds…":"🔍 Fetch News & Analyze Sentiment"}
       </button>
       {nErr&&<p style={{color:"var(--red)",fontSize:13,marginBottom:12}}>{nErr}</p>}
       {news&&<div>
@@ -439,20 +555,26 @@ Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
           </div>
         </div>
         <div style={{background:"var(--card2)",padding:14,borderRadius:8,marginBottom:16}}>
-          <div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>AI ANALYSIS</div>
+          <div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>SENTIMENT ANALYSIS</div>
           <p style={{fontSize:14,color:"#c0c0e0",lineHeight:1.6}}>{news.summary}</p>
+          <div className="src-tag" style={{marginTop:8}}>📊 Keyword-based analysis on {news.headlines?.length || 0} headlines from Google News RSS</div>
         </div>
         {news.headlines?.length>0&&<div>
-          <div style={{fontSize:12,color:"var(--sub)",marginBottom:8}}>RECENT HEADLINES</div>
-          {news.headlines.map((h,i)=><div key={i} className="headline">{h}</div>)}
+          <div style={{fontSize:12,color:"var(--sub)",marginBottom:8}}>SCRAPED HEADLINES</div>
+          {news.headlines.map((h,i)=><div key={i} className="headline">
+            <div>{h.title}</div>
+            <div style={{fontSize:10,color:"var(--dim)",marginTop:4}}>{h.source}{h.date&&` • ${new Date(h.date).toLocaleDateString()}`}</div>
+          </div>)}
         </div>}
       </div>}
-      {!news&&!nLoad&&<p style={{fontSize:13,color:"var(--dim)"}}>Click above to fetch live news and AI sentiment on USD/INR, Fed & RBI policy.</p>}
+      {!news&&!nLoad&&<p style={{fontSize:13,color:"var(--dim)"}}>
+        Scrapes Google News RSS for USD/INR, Fed, and RBI headlines. Runs keyword-based sentiment analysis locally in your browser — no API keys, no external AI calls.
+      </p>}
     </div>}
 
     <div style={{textAlign:"center",padding:"24px 0 12px",fontSize:11,color:"#4a4a6a"}}>
-      CIP-based model • Not financial advice • Live rates auto-fetched on load<br/>
-      Add to home screen for app-like experience on mobile
+      CIP model • All data scraped from public sources • No API keys • Not financial advice<br/>
+      Sources: ExchangeRate API / Frankfurter / Global-Rates.com / Google News RSS
     </div>
     </div>
   </div>);
