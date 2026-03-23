@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>USD/INR Conversion Optimizer</title>
+<meta name="description" content="CIP-based USD/INR conversion optimizer with live rates and AI sentiment"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💱</text></svg>"/>
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;USD/INR Optimizer&quot;,&quot;short_name&quot;:&quot;FX Optimizer&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230f0f1e&quot;,&quot;theme_color&quot;:&quot;%236c63ff&quot;}"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0f0f1e"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0f1e;--card:#1a1a2e;--card2:#12122a;--border:#2a2a4a;--text:#e0e0ff;--sub:#8888aa;--dim:#6a6a8a;--accent:#6c63ff;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--purple:#9b59b6}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:6px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent)}
+
+.card{background:var(--card);border-radius:12px;padding:20px 24px;margin-bottom:16px;border:1px solid var(--border)}
+.card-title{margin:0 0 16px;font-size:14px;font-weight:600;color:#a0a0d0;text-transform:uppercase;letter-spacing:1px}
+.pill{padding:6px 16px;border-radius:20px;border:1px solid #3a3a5a;background:transparent;color:var(--sub);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.pill.active{border-color:var(--accent);background:var(--accent);color:#fff}
+.pill:hover:not(.active){border-color:#5a5a7a}
+.metric{background:var(--card);border-radius:12px;padding:16px 18px;border:1px solid var(--border)}
+.metric .label{font-size:11px;color:var(--sub);margin-bottom:4px}
+.metric .value{font-size:22px;font-weight:700}
+.metric .sub{font-size:11px;margin-top:2px}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.btn{padding:10px 24px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;background:linear-gradient(135deg,var(--accent),var(--purple))}
+.btn:disabled{background:#3a3a5a;cursor:wait}
+.btn-s{padding:8px 16px;font-size:12px;border-radius:8px;border:1px solid #3a3a5a;background:transparent;color:var(--sub);cursor:pointer;transition:all .2s}
+.btn-s:hover{border-color:#5a5a7a;color:var(--text)}
+.mono{font-family:'SF Mono','Fira Code','Consolas',monospace;background:var(--card2);padding:14px;border-radius:8px;font-size:13px;overflow-x:auto;line-height:1.7}
+.badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;margin:0 8px 8px 0}
+.headline{padding:10px 14px;background:var(--card2);border-radius:8px;margin-bottom:6px;font-size:13px;color:#c0c0e0;border-left:3px solid var(--accent)}
+.stbl{border-collapse:collapse;font-size:11px;min-width:620px;width:100%}
+.stbl th,.stbl td{padding:6px}
+.stbl th{background:var(--card2);color:var(--sub)}
+.prob-bar{height:12px;background:#2a2a4a;border-radius:6px;overflow:hidden;display:flex}
+.api-in{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;width:100%;font-family:monospace}
+.api-in:focus{outline:none;border-color:var(--accent)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.dot.live{animation:pulse 1.5s infinite}
+.flex{display:flex}.gap-8{gap:8px}.gap-12{gap:12px}.gap-16{gap:16px}.aic{align-items:center}.jcsb{justify-content:space-between}.fw{flex-wrap:wrap}
+.hdr{background:linear-gradient(135deg,#1a1a3e,#2a1a4e);padding:24px 24px 16px;border-bottom:1px solid var(--border)}
+.mx{max-width:920px;margin:0 auto}
+.sig{padding:10px 20px;border-radius:12px;text-align:center}
+.tabs{display:flex;gap:8px;margin-top:16px;overflow-x:auto;padding-bottom:4px}
+.loading{display:flex;align-items:center;justify-content:center;flex-direction:column;min-height:100vh}
+.bar-t{width:200px;height:4px;background:#2a2a4a;border-radius:2px;overflow:hidden}
+.bar-f{width:60%;height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:2px;animation:ld 1.5s ease-in-out infinite}
+@keyframes ld{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:600px){
+  .metric .value{font-size:18px}
+  .card{padding:16px}
+  .hdr{padding:16px 16px 12px}
+  .mx{padding:12px!important}
+  .stbl{font-size:10px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+
+<script type="text/babel">
+const {useState,useEffect,useCallback,useMemo}=React;
+
+/* ── Constants ── */
+const HZ=[{l:"1M",m:1},{l:"3M",m:3},{l:"6M",m:6},{l:"12M",m:12}];
+
+/* ── CIP Math ── */
+const cFwd=(s,rU,rI,mo)=>{const t=mo/12;return s*(1+(rI/100)*t)/(1+(rU/100)*t)};
+const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+const heatCol=(val,mn,mx)=>{
+  if(mx===mn)return"rgba(100,100,100,.15)";
+  const r=cl((val-mn)/(mx-mn),0,1);
+  if(r<.5){const t=r/.5;return`rgba(${0|34+t*216},${0|197+t*3},${0|94-t*34},.7)`}
+  const t=(r-.5)/.5;return`rgba(${0|250-t*11},${0|200-t*132},${0|60+t*8},.7)`
+};
+
+const buildMx=(sp,bU,bI,spr,mo,steps=5,ss=.5)=>{
+  const uR=[],iR=[];
+  for(let i=-steps;i<=steps;i++){uR.push(+(bU+i*ss).toFixed(2));iR.push(+(bI+i*ss).toFixed(2))}
+  const cn=sp-spr,cells=[];let mn=1/0,mx=-1/0;
+  for(const ir of iR)for(const ur of uR){
+    const f=cFwd(sp,ur,ir,mo),g=f-cn,a=(g/cn)*(12/mo)*100;
+    cells.push({u:ur,i:ir,f:+f.toFixed(4),a:+a.toFixed(2)});
+    if(a<mn)mn=a;if(a>mx)mx=a;
+  }
+  return{uR,iR,cells,mn,mx}
+};
+
+/* ── Components ── */
+const Sl=({lb,val,onChange,min,max,step,unit=""})=>(
+  <div style={{marginBottom:14}}>
+    <div className="flex jcsb" style={{marginBottom:4}}>
+      <span style={{fontSize:13,color:"var(--sub)"}}>{lb}</span>
+      <span style={{fontSize:13,color:"var(--text)",fontWeight:600}}>{val.toFixed(step<.1?2:2)}{unit}</span>
+    </div>
+    <input type="range" min={min} max={max} step={step} value={val} onChange={e=>onChange(+e.target.value)}/>
+  </div>
+);
+
+const Pill=({on,onClick,ch})=><button className={`pill${on?" active":""}`} onClick={onClick}>{ch}</button>;
+const Bdg=({lb,c})=><span className="badge" style={{background:c+"22",color:c}}>{lb}</span>;
+
+/* ── Main App ── */
+function App(){
+  /* API Key */
+  const [key,setKey]=useState(()=>{try{return localStorage.getItem("_ak")||""}catch{return""}});
+  const [setup,setSetup]=useState(false);
+  const saveK=k=>{setKey(k);try{localStorage.setItem("_ak",k)}catch{}};
+
+  /* Spot */
+  const [spot,setSpot]=useState(null);
+  const [spSrc,setSpSrc]=useState("");
+  const [spTime,setSpTime]=useState("");
+  const [spLoad,setSpLoad]=useState(true);
+  const [spErr,setSpErr]=useState(null);
+  const [mSpot,setMSpot]=useState(false);
+  const [mSpotV,setMSpotV]=useState(85.5);
+
+  /* Rates */
+  const [lU,setLU]=useState(null);
+  const [lI,setLI]=useState(null);
+  const [rSrc,setRSrc]=useState("");
+  const [rLoad,setRLoad]=useState(true);
+  const [rErr,setRErr]=useState(null);
+  const [mRate,setMRate]=useState(false);
+  const [uR,setUR]=useState(4.5);
+  const [iR,setIR]=useState(6.5);
+
+  /* Controls */
+  const [spr,setSpr]=useState(.28);
+  const [hz,setHz]=useState(3);
+  const [tab,setTab]=useState("dash");
+
+  /* News */
+  const [news,setNews]=useState(null);
+  const [nLoad,setNLoad]=useState(false);
+  const [nErr,setNErr]=useState(null);
+
+  /* Claude helper */
+  const claude=useCallback(async(prompt)=>{
+    const k=key||(()=>{try{return localStorage.getItem("_ak")}catch{return""}})();
+    if(!k)throw new Error("NO_KEY");
+    const r=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":k,"anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
+        tools:[{type:"web_search_20250305",name:"web_search"}],
+        messages:[{role:"user",content:prompt}]})
+    });
+    if(!r.ok){const t=await r.text();throw new Error(`API ${r.status}: ${t.slice(0,100)}`)}
+    const d=await r.json();
+    return(d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
+  },[key]);
+
+  /* Fetch Spot */
+  const getSpot=useCallback(async()=>{
+    setSpLoad(true);setSpErr(null);
+    try{
+      const r=await fetch("https://open.exchangerate-api.com/v6/latest/USD");
+      if(r.ok){const d=await r.json();if(d?.rates?.INR){
+        const v=d.rates.INR;setSpot(v);setMSpotV(v);
+        setSpSrc("ExchangeRate API (free)");setSpTime(new Date().toLocaleString());setSpLoad(false);return;
+      }}
+    }catch{}
+    /* Fallback: Claude */
+    try{
+      const t=await claude(`Search for the current USD to INR exchange rate. Return ONLY JSON, no markdown: {"rate":<number>,"source":"<name>"}`);
+      const p=JSON.parse(t.replace(/```json|```/g,"").trim());
+      setSpot(p.rate);setMSpotV(p.rate);setSpSrc(p.source||"Claude Web Search");setSpTime(new Date().toLocaleString());
+    }catch(e){
+      setSpot(85.5);setMSpotV(85.5);setSpSrc("Default (offline)");
+      setSpErr(e.message==="NO_KEY"?"Add API key in ⚙️ for live fallback":"Using default rate");
+      setSpTime(new Date().toLocaleString());
+    }finally{setSpLoad(false)}
+  },[claude]);
+
+  /* Fetch Rates */
+  const getRates=useCallback(async()=>{
+    setRLoad(true);setRErr(null);
+    try{
+      const t=await claude(`Search for the current US Federal Funds Rate (target upper bound) and India RBI Repo Rate as of today. Return ONLY JSON, no markdown, no preamble: {"fed_rate":<number>,"rbi_rate":<number>,"fed_source":"<name>","rbi_source":"<name>"}`);
+      const p=JSON.parse(t.replace(/```json|```/g,"").trim());
+      setLU(p.fed_rate);setLI(p.rbi_rate);
+      if(!mRate){setUR(p.fed_rate);setIR(p.rbi_rate)}
+      setRSrc(`Fed via ${p.fed_source} • RBI via ${p.rbi_source}`);
+    }catch(e){
+      setLU(4.5);setLI(6.5);
+      setRErr(e.message==="NO_KEY"?"Add Anthropic API key in ⚙️ Settings":"Failed — using defaults");
+      setRSrc("Defaults");
+    }finally{setRLoad(false)}
+  },[claude,mRate]);
+
+  useEffect(()=>{getSpot();getRates()},[]);
+
+  /* Derived */
+  const aS=mSpot?mSpotV:(spot||85.5);
+  const aU=mRate?uR:(lU||uR);
+  const aI=mRate?iR:(lI||iR);
+  const fwd=cFwd(aS,aU,aI,hz);
+  const cn=aS-spr;
+  const fg=fwd-cn;
+  const ar=(fg/cn)*(12/hz)*100;
+  const hw=fg>0;
+  const mx=useMemo(()=>buildMx(aS,aU,aI,spr,hz),[aS,aU,aI,spr,hz]);
+
+  /* News */
+  const getNews=useCallback(async()=>{
+    setNLoad(true);setNErr(null);
+    try{
+      const t=await claude(`You are a forex analyst. Search for the latest USD/INR news, US Fed monetary policy stance, and India RBI monetary policy stance from the past week.
+
+Return ONLY a JSON object — no markdown fences, no preamble, no explanation:
+{"fed_stance":"hawkish"|"neutral"|"dovish","rbi_stance":"hawkish"|"neutral"|"dovish","sentiment_score":<number -100 to 100, negative = INR likely weakens vs USD>,"probability_hold_usd":<0-100>,"summary":"<2-3 sentence market summary>","headlines":["<h1>","<h2>","<h3>","<h4>"]}`);
+      setNews(JSON.parse(t.replace(/```json|```/g,"").trim()));
+    }catch(e){setNErr(e.message==="NO_KEY"?"Add your Anthropic API key in ⚙️ Settings":"Failed. Try again.")}
+    finally{setNLoad(false)}
+  },[claude]);
+
+  const stC=s=>s==="hawkish"?"#ef4444":s==="dovish"?"#22c55e":"#eab308";
+  const nP=news?.probability_hold_usd??null;
+  const sig=nP!==null?(hw&&nP>50?"HOLD USD":!hw&&nP<50?"CONVERT NOW":"MIXED SIGNAL"):(hw?"HOLD USD (CIP)":"CONVERT NOW (CIP)");
+  const sC=sig.includes("HOLD")?"var(--green)":sig.includes("CONVERT")?"var(--red)":"var(--yellow)";
+
+  /* Loading state */
+  if(spLoad&&!spot)return(
+    <div className="loading">
+      <div style={{fontSize:48,marginBottom:16}}>💱</div>
+      <div style={{fontSize:16,fontWeight:600,marginBottom:12}}>Fetching live market data…</div>
+      <div className="bar-t"><div className="bar-f"/></div>
+    </div>);
+
+  return(<div>
+    {/* ━━ HEADER ━━ */}
+    <div className="hdr"><div className="mx">
+      <div className="flex aic jcsb fw gap-12">
+        <div>
+          <h1 style={{fontSize:22,fontWeight:700}}>💱 USD/INR Optimizer</h1>
+          <p style={{marginTop:4,fontSize:13,color:"var(--sub)"}}>Covered Interest Rate Parity + AI Sentiment</p>
+        </div>
+        <div className="flex gap-8 aic">
+          <button className="btn-s" onClick={()=>setSetup(!setup)} style={setup?{borderColor:"var(--accent)",color:"var(--accent)"}:{}}>⚙️</button>
+          <div className="sig" style={{background:sC+"18",border:`1px solid ${sC}44`}}>
+            <div style={{fontSize:10,color:"var(--sub)"}}>SIGNAL</div>
+            <div style={{fontSize:15,fontWeight:700,color:sC}}>{sig}</div>
+          </div>
+        </div>
+      </div>
+      <div className="tabs">
+        {[["dash","📊 Dashboard"],["matrix","🔢 Sensitivity"],["news","📰 News & AI"]].map(([k,v])=>(
+          <Pill key={k} on={tab===k} onClick={()=>setTab(k)} ch={v}/>
+        ))}
+      </div>
+    </div></div>
+
+    <div className="mx" style={{padding:20}}>
+
+    {/* ━━ SETTINGS ━━ */}
+    {setup&&<div className="card">
+      <h3 className="card-title">🔑 API Settings</h3>
+      <p style={{fontSize:13,color:"var(--sub)",marginBottom:12}}>
+        Your Anthropic API key powers live interest rate lookups, news feed, and sentiment analysis.
+        It stays in your browser's local storage only — never sent anywhere except Anthropic's API.
+      </p>
+      <input className="api-in" type="password" placeholder="sk-ant-api03-..." value={key} onChange={e=>saveK(e.target.value)}/>
+      <div className="flex gap-8" style={{marginTop:12}}>
+        <button className="btn-s" onClick={()=>{getSpot();getRates()}}>🔄 Re-fetch all rates</button>
+        {key&&<span style={{fontSize:12,color:"var(--green)",alignSelf:"center"}}>✓ Key saved</span>}
+      </div>
+    </div>}
+
+    {/* ━━ LIVE SPOT ━━ */}
+    <div className="card">
+      <h3 className="card-title">📡 Live Spot Rate</h3>
+      <div className="flex aic jcsb fw gap-12">
+        <div>
+          <div style={{fontSize:32,fontWeight:700}}>{spLoad?"…":"₹"+aS.toFixed(2)}</div>
+          <div style={{fontSize:11,color:"var(--dim)",marginTop:2}}>
+            <span className={`dot${mSpot?"":" live"}`} style={{background:mSpot?"var(--yellow)":"var(--green)"}}/>
+            {mSpot?"Manual override":`${spSrc}`}{spTime&&` • ${spTime}`}
+          </div>
+          {spErr&&<div style={{fontSize:11,color:"var(--yellow)",marginTop:4}}>⚠ {spErr}</div>}
+        </div>
+        <div className="flex gap-8">
+          <button className="btn-s" onClick={getSpot}>🔄</button>
+          <button className="btn-s" onClick={()=>setMSpot(!mSpot)} style={mSpot?{borderColor:"var(--yellow)",color:"var(--yellow)"}:{}}>
+            {mSpot?"✏️ ON":"✏️"}
+          </button>
+        </div>
+      </div>
+      {mSpot&&<div style={{marginTop:14}}><Sl lb="Manual Spot" val={mSpotV} onChange={setMSpotV} min={75} max={95} step={.01}/></div>}
+    </div>
+
+    {/* ━━ LIVE RATES ━━ */}
+    <div className="card">
+      <h3 className="card-title">📈 Interest Rates</h3>
+      <div className="flex aic jcsb fw gap-12">
+        <div className="flex gap-16 fw aic">
+          <div><span style={{fontSize:13,color:"var(--sub)"}}>Fed Funds: </span><span style={{fontSize:20,fontWeight:700}}>{rLoad&&!lU?"…":`${aU.toFixed(2)}%`}</span></div>
+          <div><span style={{fontSize:13,color:"var(--sub)"}}>RBI Repo: </span><span style={{fontSize:20,fontWeight:700}}>{rLoad&&!lI?"…":`${aI.toFixed(2)}%`}</span></div>
+        </div>
+        <div className="flex gap-8">
+          <button className="btn-s" onClick={getRates}>🔄</button>
+          <button className="btn-s" onClick={()=>{setMRate(!mRate);if(!mRate&&lU){setUR(lU);setIR(lI)}}} style={mRate?{borderColor:"var(--yellow)",color:"var(--yellow)"}:{}}>
+            {mRate?"✏️ ON":"✏️"}
+          </button>
+        </div>
+      </div>
+      {!mRate&&<div style={{fontSize:11,color:"var(--dim)",marginTop:6}}>
+        <span className={`dot${rErr?" ":" live"}`} style={{background:rErr?"var(--yellow)":"var(--green)"}}/>
+        {rSrc}{rErr&&<span style={{color:"var(--yellow)",marginLeft:8}}>⚠ {rErr}</span>}
+      </div>}
+      {mRate&&<div className="grid g3" style={{marginTop:12,gap:20}}>
+        <Sl lb="USD Rate (Fed Funds / MM)" val={uR} onChange={setUR} min={0} max={10} step={.25} unit="%"/>
+        <Sl lb="INR Rate (RBI Repo / FD)" val={iR} onChange={setIR} min={0} max={12} step={.25} unit="%"/>
+      </div>}
+    </div>
+
+    {/* ━━ SPREAD & HORIZON ━━ */}
+    <div className="card">
+      <h3 className="card-title">⚙️ Transfer Parameters</h3>
+      <div style={{maxWidth:320}}><Sl lb="Transfer Spread" val={spr} onChange={setSpr} min={.05} max={.5} step={.01} unit=" ₹"/></div>
+      <div className="flex gap-8 aic" style={{marginTop:4}}>
+        <span style={{fontSize:13,color:"var(--sub)",marginRight:8}}>Horizon:</span>
+        {HZ.map(h=><Pill key={h.m} on={hz===h.m} onClick={()=>setHz(h.m)} ch={h.l}/>)}
+      </div>
+    </div>
+
+    {/* ━━━━━━━━━━━ DASHBOARD TAB ━━━━━━━━━━━ */}
+    {tab==="dash"&&<>
+      <div className="grid g4" style={{marginBottom:16}}>
+        {[
+          {l:"Spot Rate",v:`₹${aS.toFixed(2)}`,s:"USD/INR (live)"},
+          {l:"Convert Now",v:`₹${cn.toFixed(2)}`,s:`After ₹${spr.toFixed(2)} spread`},
+          {l:`CIP Forward (${hz}M)`,v:`₹${fwd.toFixed(2)}`,s:`${fg>0?"+":""}${fg.toFixed(2)} vs now`},
+          {l:"Ann. Return (Hold)",v:`${ar>0?"+":""}${ar.toFixed(2)}%`,s:hw?"✅ Favor HOLD":"🔴 Favor CONVERT",c:hw?"var(--green)":"var(--red)"},
+        ].map((c,i)=>(
+          <div key={i} className="metric">
+            <div className="label">{c.l}</div>
+            <div className="value" style={{color:c.c||"var(--text)"}}>{c.v}</div>
+            <div className="sub" style={{color:c.c||"var(--accent)"}}>{c.s}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">📐 CIP Formula Breakdown</h3>
+        <div className="mono" style={{marginBottom:12}}>
+          F = S × (1 + r<sub>INR</sub> × t) / (1 + r<sub>USD</sub> × t)<br/>
+          F = {aS.toFixed(2)} × (1 + {(aI/100).toFixed(4)} × {(hz/12).toFixed(4)}) / (1 + {(aU/100).toFixed(4)} × {(hz/12).toFixed(4)})<br/>
+          <strong style={{color:"var(--accent)"}}>F = ₹{fwd.toFixed(4)}</strong>
+        </div>
+        <p style={{fontSize:13,color:"var(--sub)",lineHeight:1.6}}>
+          {hw
+            ?`CIP forward (₹${fwd.toFixed(2)}) > convert-now (₹${cn.toFixed(2)}). Holding USD and converting at the forward rate nets you ₹${fg.toFixed(2)} more per dollar, equivalent to ~${ar.toFixed(1)}% annualized return.`
+            :`CIP forward (₹${fwd.toFixed(2)}) < convert-now (₹${cn.toFixed(2)}). Converting now saves you ₹${Math.abs(fg).toFixed(2)} per dollar versus waiting.`}
+        </p>
+      </div>
+
+      {news&&<div className="card">
+        <h3 className="card-title">🤖 AI Sentiment Summary</h3>
+        <div style={{marginBottom:8}}>
+          <Bdg lb={`Fed: ${news.fed_stance}`} c={stC(news.fed_stance)}/>
+          <Bdg lb={`RBI: ${news.rbi_stance}`} c={stC(news.rbi_stance)}/>
+          <Bdg lb={`Hold USD: ${news.probability_hold_usd}%`} c={news.probability_hold_usd>50?"var(--green)":"var(--red)"}/>
+        </div>
+        <p style={{fontSize:14,color:"#c0c0e0",lineHeight:1.6}}>{news.summary}</p>
+      </div>}
+    </>}
+
+    {/* ━━━━━━━━━━━ MATRIX TAB ━━━━━━━━━━━ */}
+    {tab==="matrix"&&<div className="card">
+      <h3 className="card-title">Sensitivity — {hz}M Forward (Ann. % Gain vs Convert Now)</h3>
+      <div style={{overflowX:"auto",paddingBottom:8}}>
+        <table className="stbl"><thead><tr>
+          <th style={{position:"sticky",left:0,zIndex:2}}>INR↓ \ USD→</th>
+          {mx.uR.map(u=><th key={u} style={{color:u===aU?"var(--accent)":"",fontWeight:u===aU?700:400}}>{u.toFixed(1)}%</th>)}
+        </tr></thead><tbody>
+          {mx.iR.map(ir=><tr key={ir}>
+            <td style={{background:"var(--card2)",position:"sticky",left:0,zIndex:1,color:ir===aI?"var(--accent)":"var(--sub)",fontWeight:ir===aI?700:400}}>{ir.toFixed(1)}%</td>
+            {mx.uR.map(ur=>{
+              const c=mx.cells.find(x=>x.u===ur&&x.i===ir);
+              const b=ur===aU&&ir===aI;
+              return<td key={ur} style={{textAlign:"center",background:heatCol(c.a,mx.mn,mx.mx),fontWeight:b?700:400,border:b?"2px solid var(--accent)":"1px solid var(--bg)",borderRadius:b?4:0}}>
+                <div>{c.a>0?"+":""}{c.a}%</div>
+                <div style={{fontSize:9,color:"#aaa",marginTop:1}}>₹{c.f.toFixed(1)}</div>
+              </td>
+            })}
+          </tr>)}
+        </tbody></table>
+      </div>
+      <div className="flex gap-16 fw" style={{marginTop:12,fontSize:11,color:"var(--sub)"}}>
+        <span>🟢 Green = Hold USD wins</span>
+        <span>🔴 Red = Convert now wins</span>
+        <span>📌 Border = Current rates</span>
+      </div>
+    </div>}
+
+    {/* ━━━━━━━━━━━ NEWS TAB ━━━━━━━━━━━ */}
+    {tab==="news"&&<div className="card">
+      <h3 className="card-title">📰 AI-Powered News & Sentiment</h3>
+      <button className="btn" onClick={getNews} disabled={nLoad} style={{marginBottom:16}}>
+        {nLoad?"⏳ Analyzing markets…":"🔍 Fetch Latest News & Sentiment"}
+      </button>
+      {nErr&&<p style={{color:"var(--red)",fontSize:13,marginBottom:12}}>{nErr}</p>}
+      {news&&<div>
+        <div className="grid g2" style={{marginBottom:16}}>
+          {[
+            {l:"Fed Stance",v:news.fed_stance?.toUpperCase(),c:stC(news.fed_stance)},
+            {l:"RBI Stance",v:news.rbi_stance?.toUpperCase(),c:stC(news.rbi_stance)},
+            {l:"Sentiment",v:`${news.sentiment_score>0?"+":""}${news.sentiment_score}`,c:news.sentiment_score>0?"#22c55e":"#ef4444"},
+            {l:"P(Hold USD)",v:`${news.probability_hold_usd}%`,c:news.probability_hold_usd>50?"#22c55e":"#ef4444"},
+          ].map((c,i)=><div key={i} style={{background:"var(--card2)",padding:14,borderRadius:8,textAlign:"center"}}>
+            <div style={{fontSize:11,color:"var(--sub)"}}>{c.l}</div>
+            <div style={{fontSize:18,fontWeight:700,color:c.c,marginTop:4}}>{c.v}</div>
+          </div>)}
+        </div>
+        <div style={{marginBottom:16}}>
+          <div className="flex jcsb" style={{fontSize:11,color:"var(--sub)",marginBottom:4}}>
+            <span>Convert Now ({100-news.probability_hold_usd}%)</span>
+            <span>Hold USD ({news.probability_hold_usd}%)</span>
+          </div>
+          <div className="prob-bar">
+            <div style={{width:`${100-news.probability_hold_usd}%`,background:"linear-gradient(90deg,#ef4444,#f97316)",transition:"width .5s"}}/>
+            <div style={{width:`${news.probability_hold_usd}%`,background:"linear-gradient(90deg,#22c55e,#10b981)",transition:"width .5s"}}/>
+          </div>
+        </div>
+        <div style={{background:"var(--card2)",padding:14,borderRadius:8,marginBottom:16}}>
+          <div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>AI ANALYSIS</div>
+          <p style={{fontSize:14,color:"#c0c0e0",lineHeight:1.6}}>{news.summary}</p>
+        </div>
+        {news.headlines?.length>0&&<div>
+          <div style={{fontSize:12,color:"var(--sub)",marginBottom:8}}>RECENT HEADLINES</div>
+          {news.headlines.map((h,i)=><div key={i} className="headline">{h}</div>)}
+        </div>}
+      </div>}
+      {!news&&!nLoad&&<p style={{fontSize:13,color:"var(--dim)"}}>Click above to fetch live news and AI sentiment on USD/INR, Fed & RBI policy.</p>}
+    </div>}
+
+    <div style={{textAlign:"center",padding:"24px 0 12px",fontSize:11,color:"#4a4a6a"}}>
+      CIP-based model • Not financial advice • Live rates auto-fetched on load<br/>
+      Add to home screen for app-like experience on mobile
+    </div>
+    </div>
+  </div>);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
